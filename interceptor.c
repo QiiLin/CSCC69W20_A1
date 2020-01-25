@@ -378,11 +378,11 @@ static int init_function(void) {
 	// get lock for syscall table for syscall table operations
 	spin_lock(&calltable_lock);
 	// set syscall table to RW and replace mysyscall and my_exit_group
-	set_addr_rw(sys_call_table);
+	set_addr_rw((unsigned long) sys_call_table);
 	sys_call_table[MY_CUSTOM_SYSCALL] = &my_syscall;
 	sys_call_table[__NR_exit_group] = &my_exit_group;
 	// set syscall table back to ro
-	set_addr_ro(sys_call_table);
+	set_addr_ro((unsigned long) sys_call_table);
 	// release syscall table lock
 	spin_unlock(&calltable_lock);
 	// initialize bookkeeping data structures
@@ -415,13 +415,13 @@ static void exit_function(void)
 	// gets the lock for syscall table for synchronization    
 	spin_lock(&calltable_lock);
 	// set syscall table to RW
-	set_addr_rw(sys_call_table);
+	set_addr_rw((unsigned long) sys_call_table);
 	// restore MY_CUSTOM_SYSCALL to original syscall
 	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
 	// restore __NR_exit_group to original syscall
 	sys_call_table[__NR_exit_group] = orig_exit_group;
 	// set syscall table back to ro
-	set_addr_ro(sys_call_table);
+	set_addr_ro((unsigned long) sys_call_table);
 	// release the lock
 	spin_unlock(&calltable_lock);
 }
