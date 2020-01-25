@@ -251,9 +251,15 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {
-
-
-
+	// gets exiting process's pid and use del_pid(int) to remove this pid from all intercepted syscall's process list
+	int pid = current->pid;
+	// get calltable lock for del_pid operation
+	spin_lock(&calltable_lock);
+	del_pid(pid);
+	// release lock
+	spin_unlock(&calltable_lock);
+	// call original exit group function
+	*orig_exit_group(status);
 }
 //----------------------------------------------------------------
 
@@ -365,13 +371,32 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
-
-
-
-
-
-
-
+	// store MY_CUSTOM_SYSCALL into orig_custom_syscall
+	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
+	// store __NR_exit_group in orig_exit_group
+	orig_exit_group = sys_call_table[__NR_exit_group];
+	// get lock for syscall table for syscall table operations
+	spin_lock(&calltable_lock);
+	// set syscall table to RW and replace mysyscall and my_exit_group
+	set_addr_rw(sys_call_table);
+	sys_call_table[MY_CUSTOM_SYSCALL] = &my_syscall;
+	sys_call_table[__NR_exit_group] = &my_exit_group;
+	// set syscall table back to ro
+	set_addr_ro(sys_call_table);
+	// release syscall table lock
+	spin_unlock(&calltable_lock);
+	// initialize bookkeeping data structures
+	// lock calltable_lock for synchronization
+	spin_lock(&calltable_lock);
+	for(s = 1; s < NR_syscalls; s++) {
+		table[s].f = sys_call_table[s];
+		table[s].intercepted = 0;
+		table[s].monitored = 0;
+		table[s].listcount = 0;
+		table[s].my_list = INIT_LIST_HEAD(&struct list_head single);
+	}
+	// release lock after initialization
+	spin_unlock(&calltable_lock);
 	return 0;
 }
 
@@ -386,13 +411,19 @@ static int init_function(void) {
  * - Ensure synchronization, if needed.
  */
 static void exit_function(void)
-{        
-
-
-
-
-
-
+{    
+	// gets the lock for syscall table for synchronization    
+	spin_lock(&calltable_lock);
+	// set syscall table to RW
+	set_addr_rw(sys_call_table);
+	// restore MY_CUSTOM_SYSCALL to original syscall
+	sys_call_table[MY_CUSTOM_SYSCALL] = orig_custom_syscall;
+	// restore __NR_exit_group to original syscall
+	sys_call_table[__NR_exit_group] = orig_exit_group;
+	// set syscall table back to ro
+	set_addr_ro(sys_call_table);
+	// release the lock
+	spin_unlock(&calltable_lock);
 }
 
 module_init(init_function);
