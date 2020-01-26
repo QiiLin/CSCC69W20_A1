@@ -286,8 +286,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	}
 	spin_unlock(&calltable_lock);
     // call the orginial function
-	table[reg.ax].f(reg);
-	return 0; // Just a placeholder, so it compiles with no warnings!
+	return table[reg.ax].f(reg);
 }
 
 /**
