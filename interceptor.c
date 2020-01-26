@@ -350,7 +350,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EPERM;
 		}
 	} else {
-		if ( pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == null) {
+		if ( pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) {
 			return -EINVAL;
 		}
 		if ((pid == 0 && current_uid() != 0) || check_pid_from_list((pid_t) pid, (pid_t)current->pid) != 0) {
@@ -413,7 +413,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				// set it equal to 2 and reset the mylist
 				table[syscall].monitored = 2;
 				table[syscall].listcount = 0;
-				INIT_LIST_HEAD(&(table[i].my_list));
+				INIT_LIST_HEAD(&(table[syscall].my_list));
 			} else {
 				// remove pid form black list and I am not sure if I should do this TODO
 				// check if the pid is in the black list
@@ -438,7 +438,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		if (pid == 0) {
 			table[syscall].monitored = 0;
 			table[syscall].listcount = 0;
-			INIT_LIST_HEAD(&(table[i].my_list));
+			INIT_LIST_HEAD(&(table[syscall].my_list));
 		} else if (table[syscall].monitored == 2) {
 			// add blacklist
 			// if the pid is already being moitor by the syscall
