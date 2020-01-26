@@ -380,6 +380,10 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		} else {
 			// set it to be non intercepted
 			table[syscall].intercepted = 0;
+			// TODO ask ta about this
+			destroy_list(syscall);
+			INIT_LIST_HEAD(&(table[syscall].my_list));
+
 			set_addr_rw((unsigned long)sys_call_table);
 			sys_call_table[syscall] = (void *) table[syscall].f;
 			set_addr_ro((unsigned long)sys_call_table);
@@ -411,20 +415,20 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			if (pid == 0) {
 				// set it equal to 2 and reset the mylist
 				table[syscall].monitored = 2;
-				table[syscall].listcount = 0;
+				destroy_list(syscall);
 				INIT_LIST_HEAD(&(table[syscall].my_list));
 			} else {
-				// // remove pid form black list and I am not sure if I should do this TODO
-				// // check if the pid is in the black list
-				// if (check_pid_monitored(syscall, pid) == 0) {
-				// 	spin_unlock(&pidlist_lock);
-				// 	return -EINVAL;
-				// }
-				// // try to remove it 
-				// if(del_pid_sysc(pid, syscall) != 0) {
-				// 	spin_unlock(&pidlist_lock);
-				// 	return -EINVAL;
-				// }
+				// remove pid form black list and I am not sure if I should do this TODO
+				// check if the pid is in the black list
+				if (check_pid_monitored(syscall, pid) == 0) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+				// try to remove it 
+				if(del_pid_sysc(pid, syscall) != 0) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
 			}
 		}
 		spin_unlock(&pidlist_lock);
@@ -436,7 +440,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		}
 		if (pid == 0) {
 			table[syscall].monitored = 0;
-			table[syscall].listcount = 0;
+			destroy_list(syscall);
 			INIT_LIST_HEAD(&(table[syscall].my_list));
 		} else if (table[syscall].monitored == 2) {
 			// add blacklist
@@ -554,12 +558,14 @@ static void exit_function(void)
 	// I don't think we need lock here. since this exit will be call only when 
 	// the current kernel module is being unloaded
 	spin_lock(&calltable_lock);
+	set_addr_rw((unsigned long) sys_call_table);
 	for(s = 1; s < NR_syscalls; s++) {
 		if (table[s].intercepted) {
 			sys_call_table[s] = (void *) table[s].f;
 		}
 		destroy_list(s);
-	}
+	}	
+	set_addr_ro((unsigned long) sys_call_table);
 	spin_unlock(&calltable_lock);
 
 
