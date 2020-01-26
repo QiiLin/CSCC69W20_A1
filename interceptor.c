@@ -251,22 +251,10 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {
-<<<<<<< HEAD
 	spin_lock(&pidlist_lock);
 	del_pid(current->pid);
 	spin_unlock(&pidlist_lock);
 	orig_exit_group(status);
-=======
-	// gets exiting process's pid and use del_pid(int) to remove this pid from all intercepted syscall's process list
-	int pid = current->pid;
-	// get calltable lock for del_pid operation
-	spin_lock(&calltable_lock);
-	del_pid(pid);
-	// release lock
-	spin_unlock(&calltable_lock);
-	// call original exit group function
-	*orig_exit_group(status);
->>>>>>> 9d3e8aaeb9df467b40419c310dbed3d520d8edec
 }
 //----------------------------------------------------------------
 
