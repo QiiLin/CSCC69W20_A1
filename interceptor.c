@@ -50,7 +50,7 @@ void set_addr_ro(unsigned long addr) {
  * It's highly unlikely that you will need any globals other than these.
  */
 
-/* List structure - each intercepted syscall may have a list of monitored pids */
+/* List structure - each intsynchronizedercepted syscall may have a list of monitored pids */
 struct pid_list {
 	pid_t pid;
 	struct list_head list;
@@ -251,9 +251,10 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {
-
-
-
+	spin_lock(&pidlist_lock);
+	del_pid(current->pid);
+	spin_unlock(&pidlist_lock);
+	orig_exit_group(status);
 }
 //----------------------------------------------------------------
 
@@ -276,11 +277,15 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
-
-
-
-
-
+	spin_lock(&calltable_lock);
+	int monitored = table[reg.ax].monitored;
+	// if it is found in partial  or if it is not no black list
+	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0) {
+		log_message(1,STD_OUT, "%d %d %d %d %d %d %d %d", reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp, current->pid)
+	}
+    // call the orginial function
+	table[reg.ax].f(reg);
+	spin_unlock(&calltable_lock);
 	return 0; // Just a placeholder, so it compiles with no warnings!
 }
 
@@ -334,14 +339,138 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
+	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
+	// arugment check 
+	if (syscall <= 0 || syscall > NR_syscalls) {
+		return -EINVAL;
+	}
+	if (isfirst) {
+		if (current_uid() != 0) {
+			return -EPERM;
+		}
+	} else {
+		if ( pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == null) {
+			return -EINVAL;
+		}
+		if ((pid == 0 && current_uid() != 0) || check_pid_from_list((pid_t) pid, (pid_t)current->pid) != 0) {
+			return -EPERM;
+		}
+	}
 
+	if (cmd == REQUEST_SYSCALL_INTERCEPT) {
+		spin_lock(&calltable_lock);
+		// check if it is intercepted
+		if (table[syscall].intercepted) {
+			spin_unlock(&calltable_lock);
+			return -EBUSY; 
+		} else {
+			// set it to be intercepted
+			table[syscall].intercepted = 1;
+			set_addr_rw((unsigned long)sys_call_table);
+			sys_call_table[syscall] = (void *)&interceptor;
+			set_addr_ro((unsigned long)sys_call_table);
+		}
+		spin_unlock(&calltable_lock);
+	} else if (cmd == REQUEST_SYSCALL_RELEASE) {
+		spin_lock(&calltable_lock);
+		// check if it is not intercept
+		if (table[syscall].intercepted == 0) {
+			spin_unlock(&calltable_lock);
+			return -EINVAL; 
+		} else {
+			// set it to be non intercepted
+			table[syscall].intercepted = 0;
+			set_addr_rw((unsigned long)sys_call_table);
+			sys_call_table[syscall] = (void *) table[syscall].f;
+			set_addr_ro((unsigned long)sys_call_table);
+		}
+		spin_unlock(&calltable_lock);
+	} else if (cmd == REQUEST_START_MONITORING) {
+		spin_lock(&pidlist_lock);
+		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
+		if (table[syscall].intercepted != 1) {
+			spin_unlock(&pidlist_lock);
+			return -EBUSY;
+		}
+		// if syscall is monitor all or the current action is making it monitor all
+		if (table[syscall].monitored != 2 || pid != 0) {
+			// if the pid is already being moitor by the syscall
+			if (check_pid_monitored(syscall, pid)) {
+				spin_unlock(&pidlist_lock);
+				return -EBUSY;
+			}
+			// try add it to the table
+			if (add_pid_sysc(pid, syscall) != 0){
+				spin_unlock(&pidlist_lock);
+				return -ENOMEM;
+			}
+			// set the monitored to 1;
+			table[syscall].monitored = 1;
 
-
-
-
-
+		} else {
+			if (pid == 0) {
+				// set it equal to 2 and reset the mylist
+				table[syscall].monitored = 2;
+				table[syscall].listcount = 0;
+				INIT_LIST_HEAD(&(table[i].my_list));
+			} else {
+				// remove pid form black list and I am not sure if I should do this TODO
+				// check if the pid is in the black list
+				if (check_pid_monitored(syscall, pid) == 0) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+				// try to remove it 
+				if(del_pid_sysc(pid, syscall) != 0) {
+					spin_unlock(&pidlist_lock);
+					return -EINVAL;
+				}
+			}
+		}
+		spin_unlock(&pidlist_lock);
+	} else {
+		spin_lock(&pidlist_lock);
+		if (table[syscall].monitored == 0){
+			spin_unlock(&pidlist_lock);
+			return -EINVAL;
+		}
+		if (pid == 0) {
+			table[syscall].monitored = 0;
+			table[syscall].listcount = 0;
+			INIT_LIST_HEAD(&(table[i].my_list));
+		} else if (table[syscall].monitored == 2) {
+			// add blacklist
+			// if the pid is already being moitor by the syscall
+			if (check_pid_monitored(syscall, pid)) {
+				spin_unlock(&pidlist_lock);
+				return -EBUSY;
+			}
+			// try add it to the table
+			if (add_pid_sysc(pid, syscall) != 0){
+				spin_unlock(&pidlist_lock);
+				return -ENOMEM;
+			}
+		} else if (table[syscall].monitored == 1){
+			// remove it from list
+			if (check_pid_monitored(syscall, pid) == 0) {
+				spin_unlock(&pidlist_lock);
+				return -EINVAL;
+			}
+			if(del_pid_sysc(pid, syscall) != 0){
+				spin_unlock(&pidlist_lock);
+				return -EINVAL;
+			}
+			if (table[syscall].listcount == 0 ) {
+				table[syscall].monitored = 0;
+			}
+			
+		}
+		spin_unlock(&pidlist_lock);
+	}
 	return 0;
 }
+
+
 
 /**
  *
