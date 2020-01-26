@@ -277,8 +277,8 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
-	spin_lock(&calltable_lock);
 	int monitored;
+	spin_lock(&calltable_lock);
 	monitored = table[reg.ax].monitored;
 	// if it is found in partial  or if it is not no black list
 	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
@@ -495,6 +495,7 @@ long (*orig_custom_syscall)(void);
  * - Ensure synchronization as needed.
  */
 static int init_function(void) {
+	int  s;
 	// store MY_CUSTOM_SYSCALL into orig_custom_syscall
 	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
 	// store __NR_exit_group in orig_exit_group
@@ -513,7 +514,6 @@ static int init_function(void) {
 	// initialize bookkeeping data structures
 	// lock calltable_lock for synchronization
 	// spin_lock(&calltable_lock);
-	int  s;
 	for(s = 1; s < NR_syscalls; s++) {
 		table[s].f = sys_call_table[s];
 		table[s].intercepted = 0;
