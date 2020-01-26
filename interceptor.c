@@ -284,9 +284,9 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
 		log_message(current->pid , reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 	}
+	spin_unlock(&calltable_lock);
     // call the orginial function
 	table[reg.ax].f(reg);
-	spin_unlock(&calltable_lock);
 	return 0; // Just a placeholder, so it compiles with no warnings!
 }
 
@@ -341,8 +341,8 @@ asmlinkage long interceptor(struct pt_regs reg) {
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
-	// arugment check 
-	if (syscall <= 0 || syscall > NR_syscalls) {
+	// check no negative and is not cust call
+	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
 	}
 	if (isfirst) {
@@ -350,7 +350,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EPERM;
 		}
 	} else {
-		if ( pid < 0 || pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) {
+		if ( pid < 0 || ((pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) && pid != 0)) {
 			return -EINVAL;
 		}
 		if ((pid == 0 && current_uid() != 0) || check_pid_from_list((pid_t) pid, (pid_t)current->pid) != 0) {
