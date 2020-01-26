@@ -512,8 +512,8 @@ static int init_function(void) {
 	// initialize bookkeeping data structures
 	// lock calltable_lock for synchronization
 	// spin_lock(&calltable_lock);
-	int  s = 0;
-	for(int s = 1; s < NR_syscalls; s++) {
+	int  s;
+	for(s = 1; s < NR_syscalls; s++) {
 		table[s].f = sys_call_table[s];
 		table[s].intercepted = 0;
 		table[s].monitored = 0;
@@ -549,7 +549,7 @@ static void exit_function(void)
 	set_addr_ro((unsigned long) sys_call_table);
 	// release the lock
 	spin_unlock(&calltable_lock);
-	int  s = 0;
+	int  s;
 	// also need to clean up the table, but do we need lock here?
 	// I don't think we need lock here. since this exit will be call only when 
 	// the current kernel module is being unloaded
