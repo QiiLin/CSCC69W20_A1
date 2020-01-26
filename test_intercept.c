@@ -82,9 +82,9 @@ void do_as_guest(const char *str, int args1, int args2) {
 		case -1:
 			assert(0);
 		case 0:
-			printk(0, "Debug message shown!\n");
+			printk(	"7", "Debug message shown!\n");
 			execvp("/bin/bash", exec);
-			printk(0, "Debug after shown!\n");
+			printk(	"7", "Debug after shown!\n");
 			assert(0);
 		default:
 			waitpid(last_child, NULL, 0);
