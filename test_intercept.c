@@ -82,7 +82,7 @@ void do_as_guest(const char *str, int args1, int args2) {
 		case -1:
 			assert(0);
 		case 0:
-			printf( "Debug message shown!\n");
+			printf( "Debug message1111 shown!\n");
 			execvp("/bin/bash", exec);
 			printf("Debug after shown!\n");
 			assert(0);
