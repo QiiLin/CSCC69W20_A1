@@ -508,9 +508,10 @@ static int init_function(void) {
 	set_addr_ro((unsigned long) sys_call_table);
 	// release syscall table lock
 	spin_unlock(&calltable_lock);
+	// since is only going to be init once ..there is not need to lock it
 	// initialize bookkeeping data structures
 	// lock calltable_lock for synchronization
-	spin_lock(&calltable_lock);
+	// spin_lock(&calltable_lock);
 	for(s = 1; s < NR_syscalls; s++) {
 		table[s].f = sys_call_table[s];
 		table[s].intercepted = 0;
@@ -519,7 +520,7 @@ static int init_function(void) {
 		table[s].my_list = INIT_LIST_HEAD(&struct list_head single);
 	}
 	// release lock after initialization
-	spin_unlock(&calltable_lock);
+	// spin_unlock(&calltable_lock);
 	return 0;
 }
 
@@ -547,6 +548,13 @@ static void exit_function(void)
 	set_addr_ro((unsigned long) sys_call_table);
 	// release the lock
 	spin_unlock(&calltable_lock);
+
+	// also need to clean up the table, but do we need lock here?
+	// I don't think we need lock here. since this exit will be call only when 
+	// the current kernel module is being unloaded
+	for(s = 1; s < NR_syscalls; s++) {
+		destroy_list(s);
+	}
 }
 
 module_init(init_function);
