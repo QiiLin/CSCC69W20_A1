@@ -108,7 +108,7 @@ void test_syscall(int syscall) {
 }
 
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) { 
 
 	srand(time(NULL));
 
