@@ -112,14 +112,14 @@ int main(int argc, char **argv) {
 
 	srand(time(NULL));
 
-	// if (argc>1 && strcmp(argv[1], "intercept") == 0) 
-	// 	return do_intercept(atoi(argv[2]), atoi(argv[3]));
+	if (argc>1 && strcmp(argv[1], "intercept") == 0) 
+		return do_intercept(atoi(argv[2]), atoi(argv[3]));
 
-	// if (argc>1 && strcmp(argv[1], "release") == 0)
-	// 	return do_release(atoi(argv[2]), atoi(argv[3]));
+	if (argc>1 && strcmp(argv[1], "release") == 0)
+		return do_release(atoi(argv[2]), atoi(argv[3]));
 
-	// if (argc>1 && strcmp(argv[1], "nonroot") == 0)
-	// 	return do_nonroot(atoi(argv[2]));
+	if (argc>1 && strcmp(argv[1], "nonroot") == 0)
+		return do_nonroot(atoi(argv[2]));
 
 	// test("insmod interceptor.ko %s", "", system("insmod interceptor.ko") == 0);
 	// test("bad MY_CUSTOM_SYSCALL args%s", "",  vsyscall_arg(MY_CUSTOM_SYSCALL, 3, 100, 0, 0) == -EINVAL);
