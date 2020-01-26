@@ -82,9 +82,7 @@ void do_as_guest(const char *str, int args1, int args2) {
 		case -1:
 			assert(0);
 		case 0:
-			printf( "Debug message1111 shown!\n");
 			execvp("/bin/bash", exec);
-			printf("Debug after shown!\n");
 			assert(0);
 		default:
 			waitpid(last_child, NULL, 0);
@@ -101,10 +99,10 @@ int do_nonroot(int syscall) {
 
 void test_syscall(int syscall) {
 	//clear_log();
-	// do_intercept(syscall, 0);
-	// do_intercept(syscall, -EBUSY);
+	do_intercept(syscall, 0);
+	do_intercept(syscall, -EBUSY);
 	do_as_guest("./test_intercept nonroot %d", syscall, 0);
-	// do_release(syscall, 0);
+	do_release(syscall, 0);
 }
 
 
@@ -122,22 +120,21 @@ int main(int argc, char **argv) {
 		return do_nonroot(atoi(argv[2]));
 
 	test("insmod interceptor.ko %s", "", system("insmod interceptor.ko") == 0);
-	// test("bad MY_CUSTOM_SYSCALL args%s", "",  vsyscall_arg(MY_CUSTOM_SYSCALL, 3, 100, 0, 0) == -EINVAL);
-	// do_intercept(MY_CUSTOM_SYSCALL, -EINVAL);
-	// do_release(MY_CUSTOM_SYSCALL, -EINVAL);
-	// do_intercept(-1, -EINVAL);
-	// do_release(-1, -EINVAL);
+	test("bad MY_CUSTOM_SYSCALL args%s", "",  vsyscall_arg(MY_CUSTOM_SYSCALL, 3, 100, 0, 0) == -EINVAL);
+	do_intercept(MY_CUSTOM_SYSCALL, -EINVAL);
+	do_release(MY_CUSTOM_SYSCALL, -EINVAL);
+	do_intercept(-1, -EINVAL);
+	do_release(-1, -EINVAL);
 
-	// do_intercept(__NR_exit, 0);
-	// do_release(__NR_exit, 0);
+	do_intercept(__NR_exit, 0);
+	do_release(__NR_exit, 0);
 
 	test_syscall(SYS_open);
 	/* The above line of code tests SYS_open.
 	   Feel free to add more tests here for other system calls, 
 	   once you get everything to work; check Linux documentation
 	   for other syscall number definitions.  */
-
-	// test("rmmod interceptor.ko %s", "", system("rmmod interceptor") == 0);
+	test("rmmod interceptor.ko %s", "", system("rmmod interceptor") == 0);
 	return 0;
 }
 
