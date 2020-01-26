@@ -101,10 +101,10 @@ int do_nonroot(int syscall) {
 
 void test_syscall(int syscall) {
 	//clear_log();
-	do_intercept(syscall, 0);
-	do_intercept(syscall, -EBUSY);
+	// do_intercept(syscall, 0);
+	// do_intercept(syscall, -EBUSY);
 	do_as_guest("./test_intercept nonroot %d", syscall, 0);
-	do_release(syscall, 0);
+	// do_release(syscall, 0);
 }
 
 
@@ -122,14 +122,14 @@ int main(int argc, char **argv) {
 		return do_nonroot(atoi(argv[2]));
 
 	test("insmod interceptor.ko %s", "", system("insmod interceptor.ko") == 0);
-	test("bad MY_CUSTOM_SYSCALL args%s", "",  vsyscall_arg(MY_CUSTOM_SYSCALL, 3, 100, 0, 0) == -EINVAL);
+	// test("bad MY_CUSTOM_SYSCALL args%s", "",  vsyscall_arg(MY_CUSTOM_SYSCALL, 3, 100, 0, 0) == -EINVAL);
 	// do_intercept(MY_CUSTOM_SYSCALL, -EINVAL);
 	// do_release(MY_CUSTOM_SYSCALL, -EINVAL);
 	// do_intercept(-1, -EINVAL);
 	// do_release(-1, -EINVAL);
 
-	do_intercept(__NR_exit, 0);
-	do_release(__NR_exit, 0);
+	// do_intercept(__NR_exit, 0);
+	// do_release(__NR_exit, 0);
 
 	test_syscall(SYS_open);
 	/* The above line of code tests SYS_open.
