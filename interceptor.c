@@ -278,10 +278,11 @@ void my_exit_group(int status)
  */
 asmlinkage long interceptor(struct pt_regs reg) {
 	spin_lock(&calltable_lock);
-	int monitored = table[reg.ax].monitored;
+	int monitored;
+	monitored = table[reg.ax].monitored;
 	// if it is found in partial  or if it is not no black list
-	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0) {
-		log_message(1,STD_OUT, "%d %d %d %d %d %d %d %d", reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp, current->pid)
+	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
+		log_message(reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp, current->pid);
 	}
     // call the orginial function
 	table[reg.ax].f(reg);
