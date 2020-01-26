@@ -553,9 +553,17 @@ static void exit_function(void)
 	// also need to clean up the table, but do we need lock here?
 	// I don't think we need lock here. since this exit will be call only when 
 	// the current kernel module is being unloaded
+	spin_lock(&calltable_lock);
 	for(s = 1; s < NR_syscalls; s++) {
+		if (table[s].intercepted) {
+			sys_call_table[s] = (void *) table[s].f;
+		}
 		destroy_list(s);
 	}
+	spin_unlock(&calltable_lock);
+
+
+
 }
 
 module_init(init_function);
