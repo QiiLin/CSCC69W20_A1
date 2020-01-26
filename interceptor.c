@@ -282,7 +282,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	monitored = table[reg.ax].monitored;
 	// if it is found in partial  or if it is not no black list
 	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
-		log_message(reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp, current->pid);
+		log_message(current->pid , reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 	}
     // call the orginial function
 	table[reg.ax].f(reg);
