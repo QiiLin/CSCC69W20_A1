@@ -414,17 +414,17 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				table[syscall].listcount = 0;
 				INIT_LIST_HEAD(&(table[syscall].my_list));
 			} else {
-				// remove pid form black list and I am not sure if I should do this TODO
-				// check if the pid is in the black list
-				if (check_pid_monitored(syscall, pid) == 0) {
-					spin_unlock(&pidlist_lock);
-					return -EINVAL;
-				}
-				// try to remove it 
-				if(del_pid_sysc(pid, syscall) != 0) {
-					spin_unlock(&pidlist_lock);
-					return -EINVAL;
-				}
+				// // remove pid form black list and I am not sure if I should do this TODO
+				// // check if the pid is in the black list
+				// if (check_pid_monitored(syscall, pid) == 0) {
+				// 	spin_unlock(&pidlist_lock);
+				// 	return -EINVAL;
+				// }
+				// // try to remove it 
+				// if(del_pid_sysc(pid, syscall) != 0) {
+				// 	spin_unlock(&pidlist_lock);
+				// 	return -EINVAL;
+				// }
 			}
 		}
 		spin_unlock(&pidlist_lock);
