@@ -396,12 +396,14 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		}
 		spin_unlock(&calltable_lock);
 	} else if (cmd == REQUEST_START_MONITORING) {
+						printk("reach0 here\n");
 		spin_lock(&pidlist_lock);
 		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
 		if (table[syscall].intercepted == 0) {
 			spin_unlock(&pidlist_lock);
 			return -EINVAL;
 		}
+							printk("reach1 here\n");
 		// if 2 then !chec  => if in black the result will be false
 		// if syscall is monitor all or the current action is making it monitor all
 		if (table[syscall].monitored != 2 || pid != 0) {
@@ -417,16 +419,20 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			}
 			// set the monitored to 1;
 			table[syscall].monitored = 1;
-
 		} else {
+			printk("reach2 here\n");
 			if (pid == 0 && table[syscall].monitored == 2 && table[syscall].listcount == 0) {
+								printk("My Debugger1 is Printk\n");
 				spin_unlock(&pidlist_lock);
 				return -EBUSY;
 			} else if (pid == 0) {
 				// set it equal to 2 and reset the mylist
+
+				printk("My Debugger2is Printk\n");
 				// destroy_list(syscall);
 				// table[syscall].monitored = 2;
 			} else {
+							printk("My Debugger3is Printk\n");
 				// remove pid form black list and I am not sure if I should do this TODO
 				// check if the pid is in the black list
 				if (check_pid_monitored(syscall, pid) == 0) {
