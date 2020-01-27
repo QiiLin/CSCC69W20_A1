@@ -251,9 +251,12 @@ void (*orig_exit_group)(int);
  */
 void my_exit_group(int status)
 {
+	// As required, use spin lock to block the table and delete all pids from those lists
 	spin_lock(&pidlist_lock);
 	del_pid(current->pid);
+	// Unlock the pidlist lock after deleting the lock
 	spin_unlock(&pidlist_lock);
+	// Call the original exit group as required
 	orig_exit_group(status);
 }
 //----------------------------------------------------------------
@@ -277,15 +280,19 @@ void my_exit_group(int status)
  * - Don't forget to call the original system call, so we allow processes to proceed as normal.
  */
 asmlinkage long interceptor(struct pt_regs reg) {
+	// Initilize monitored var to represent whether the sys call is monitor status
 	int monitored;
+	// Lock the call table and read the monitor from the table
 	spin_lock(&calltable_lock);
 	monitored = table[reg.ax].monitored;
-	// if it is found in partial  or if it is not no black list
+	// If its monitored value is 1 and it is located in the monitor list or monitor value is 2 and it is not located in the monitor pid list
+	// Then log the system call parameter
 	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
 		log_message(current->pid , reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 	}
+	// After checking the pid value, unlock the whole table
 	spin_unlock(&calltable_lock);
-    // call the orginial function
+    // call the orginial system call as requried
 	return table[reg.ax].f(reg);
 }
 
@@ -339,30 +346,39 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
-	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
+	// If command is none of the four possible requrets, it is invalid, return -EiNVAL as required
 	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
         cmd != REQUEST_SYSCALL_RELEASE &&
         cmd != REQUEST_START_MONITORING &&
         cmd != REQUEST_STOP_MONITORING) {
         return -EINVAL;
     }
-	// check no negative and is not cust call
+	// The number of syscall should be a positive number and it should be within NR_syscalls (number) and it should
+	// not be my customed systemcall (As a) required)
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
 	}
+	// initialize a isfirst which represent either request is a system intercept or is a requrest release
+	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
+	// Check condition b), if the command is a intercept or release, if the current pid is not zero, then return -EPERM
 	if (isfirst) {
 		if (current_uid() != 0) {
 			return -EPERM;
 		}
 	} else {
+		// the command is not intercept or release
+		// If pid is negative or process is not valid, then return -EINVAL
 		if ( pid < 0 || (pid != 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL)) {
 			return -EINVAL;
 		}
+		// the calling process is not root or pid is in the black list, then return -EPERM
 		if ((pid == 0 && current_uid() != 0) || (pid != 0 && check_pid_from_list(current->pid, pid) != 0)) {
 			return -EPERM;
 		}
 	}
+	// if the command is intercepted
 	if (cmd == REQUEST_SYSCALL_INTERCEPT) {
+		// lock the calltable to read value
 		spin_lock(&calltable_lock);
 		// check if it is intercepted
 		if (table[syscall].intercepted) {
