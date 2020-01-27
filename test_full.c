@@ -168,7 +168,7 @@ int do_nonroot(int syscall) {
 
 void test_syscall(int syscall) {
 
-	//clear_log();
+	clear_log();
 	do_intercept(syscall, 0);
 	do_intercept(syscall, -EBUSY);
 	do_as_guest("./test_full nonroot %d", syscall, 0);
@@ -212,10 +212,10 @@ int main(int argc, char **argv) {
 	// do_release(MY_CUSTOM_SYSCALL, -EINVAL);
 	// do_intercept(-1, -EINVAL);
 	// do_release(-1, -EINVAL);
-	do_intercept(__NR_exit, 0);
-	do_release(__NR_exit, 0);
+	// do_intercept(__NR_exit, 0);
+	// do_release(__NR_exit, 0);
 
-	// test_syscall(SYS_open);
+	test_syscall(SYS_open);
 	/* The above line of code tests SYS_open.
 	   Feel free to add more tests here for other system calls, 
 	   once you get everything to work; check Linux documentation
