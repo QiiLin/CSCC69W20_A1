@@ -392,7 +392,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 	} else if (cmd == REQUEST_START_MONITORING) {
 		spin_lock(&pidlist_lock);
 		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
-		if (table[syscall].intercepted != 1) {
+		if (table[syscall].intercepted == 0) {
 			spin_unlock(&pidlist_lock);
 			return -EBUSY;
 		}
@@ -414,8 +414,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		} else {
 			if (pid == 0) {
 				// set it equal to 2 and reset the mylist
-				table[syscall].monitored = 2;
 				destroy_list(syscall);
+				table[syscall].monitored = 2;
 				INIT_LIST_HEAD(&(table[syscall].my_list));
 			} else {
 				// remove pid form black list and I am not sure if I should do this TODO
@@ -439,8 +439,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EINVAL;
 		}
 		if (pid == 0) {
-			table[syscall].monitored = 0;
 			destroy_list(syscall);
+			table[syscall].monitored = 0;
 			INIT_LIST_HEAD(&(table[syscall].my_list));
 		} else if (table[syscall].monitored == 2) {
 			// add blacklist
