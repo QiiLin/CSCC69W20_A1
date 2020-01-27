@@ -339,6 +339,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
+				printk("reachinti here\n");
 	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
         cmd != REQUEST_SYSCALL_RELEASE &&
