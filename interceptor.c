@@ -339,6 +339,14 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
+	
+	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
+        cmd != REQUEST_SYSCALL_RELEASE &&
+        cmd != REQUEST_START_MONITORING &&
+        cmd != REQUEST_STOP_MONITORING) {
+        return -EINVAL;
+    }
+	
 	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	// check no negative and is not cust call
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
@@ -395,6 +403,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			spin_unlock(&pidlist_lock);
 			return -EINVAL;
 		}
+		// if 2 then !chec  => if in black the result will be false
 		// if syscall is monitor all or the current action is making it monitor all
 		if (table[syscall].monitored != 2 || pid != 0) {
 			// if the pid is already being moitor by the syscall
@@ -416,8 +425,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				return -EBUSY;
 			} else if (pid == 0) {
 				// set it equal to 2 and reset the mylist
-				destroy_list(syscall);
-				table[syscall].monitored = 2;
+				// destroy_list(syscall);
+				// table[syscall].monitored = 2;
 			} else {
 				// remove pid form black list and I am not sure if I should do this TODO
 				// check if the pid is in the black list
