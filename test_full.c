@@ -29,6 +29,7 @@ int vsyscall_arg(int sno, int n, ...) {
 	va_end(va);
 	printf("REQUEST_SYSCALL_RELEASE %d \n", sno);
 	ret = syscall(sno, args[0], args[1], args[2]);
+	printf("REQUEST_SYSCA2222LL_RELEASE %d \n", sno);
 	if(ret) ret = -errno;
 	return ret;
 }

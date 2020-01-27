@@ -393,7 +393,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
 		if (table[syscall].intercepted == 0) {
 			spin_unlock(&pidlist_lock);
-			return -EBUSY;
+			return -EINVAL;
 		}
 		// if syscall is monitor all or the current action is making it monitor all
 		if (table[syscall].monitored != 2 || pid != 0) {
@@ -411,7 +411,10 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			table[syscall].monitored = 1;
 
 		} else {
-			if (pid == 0) {
+			if (pid == 0 && table[syscall].monitored == 2 && table[syscall].listcount == 0) {
+				spin_unlock(&pidlist_lock);
+				return -EBUSY;
+			} else if (pid == 0) {
 				// set it equal to 2 and reset the mylist
 				destroy_list(syscall);
 				table[syscall].monitored = 2;
