@@ -358,10 +358,14 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EPERM;
 		}
 	} else {
+	    printk("in it 1 here\n");
 		if ( pid < 0 || ((pid_task(find_vpid(pid), PIDTYPE_PID) == NULL) && pid != 0)) {
+			printk("in it 2 here\n");
 			return -EINVAL;
 		}
+		printk("in it 3 here\n");
 		if ((pid == 0 && current_uid() != 0) || check_pid_from_list((pid_t) pid, (pid_t)current->pid) != 0) {
+			printk("in it 3 here\n");
 			return -EPERM;
 		}
 	}
