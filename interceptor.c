@@ -382,7 +382,6 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			table[syscall].intercepted = 0;
 			// TODO ask ta about this
 			destroy_list(syscall);
-			INIT_LIST_HEAD(&(table[syscall].my_list));
 
 			set_addr_rw((unsigned long)sys_call_table);
 			sys_call_table[syscall] = (void *) table[syscall].f;
@@ -416,7 +415,6 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				// set it equal to 2 and reset the mylist
 				destroy_list(syscall);
 				table[syscall].monitored = 2;
-				INIT_LIST_HEAD(&(table[syscall].my_list));
 			} else {
 				// remove pid form black list and I am not sure if I should do this TODO
 				// check if the pid is in the black list
