@@ -339,7 +339,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
-				printk("reachinti here\n");
+	printk("reachinti 1 here\n");
 	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
         cmd != REQUEST_SYSCALL_RELEASE &&
@@ -347,11 +347,12 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         cmd != REQUEST_STOP_MONITORING) {
         return -EINVAL;
     }
-	
+	printk("reachinti 2 here\n");
 	// check no negative and is not cust call
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
 	}
+	printk("reachinti 3 here\n");
 	if (isfirst) {
 		if (current_uid() != 0) {
 			return -EPERM;
@@ -364,7 +365,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EPERM;
 		}
 	}
-
+	printk("reachinti 4 here\n");
 	if (cmd == REQUEST_SYSCALL_INTERCEPT) {
 		spin_lock(&calltable_lock);
 		// check if it is intercepted
