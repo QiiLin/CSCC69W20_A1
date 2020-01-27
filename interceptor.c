@@ -363,7 +363,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			printk("in it 2 here\n");
 			return -EINVAL;
 		}
-
+		printk("in it 3 here\n");
 		if ((pid == 0 && current_uid() != 0) || check_pid_from_list(current->pid, pid) != 0) {
 			printk("in it 6 here\n");
 			return -EPERM;
