@@ -339,7 +339,7 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
-	
+	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
         cmd != REQUEST_SYSCALL_RELEASE &&
         cmd != REQUEST_START_MONITORING &&
@@ -347,7 +347,6 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         return -EINVAL;
     }
 	
-	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	// check no negative and is not cust call
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
