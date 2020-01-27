@@ -27,7 +27,7 @@ int vsyscall_arg(int sno, int n, ...) {
 		args[i] = va_arg(va, long);
 	}
 	va_end(va);
-	
+	printf("did \n")
 	ret = syscall(sno, args[0], args[1], args[2]);
 	if(ret) ret = -errno;
 	return ret;
@@ -116,10 +116,8 @@ int do_release(int syscall, int status) {
 
 
 int do_start(int syscall, int pid, int status) {
-	test("reach---||   %d  ||    ---- \n", vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid),1);
 	if (pid == -1)
 		pid=getpid();
-	test("reach---||   %d  ||    ---- \n", vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid), 1);
 	test("%d start", syscall, vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid) == status);
 	return 0;
 }
