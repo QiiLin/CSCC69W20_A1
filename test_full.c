@@ -116,9 +116,10 @@ int do_release(int syscall, int status) {
 
 
 int do_start(int syscall, int pid, int status) {
+	test("reach---||   %d  ||    ---- \n", vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid),true);
 	if (pid == -1)
 		pid=getpid();
-	printf("reach---------------||   %d  ||    ---- \n", vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid));
+	test("reach---||   %d  ||    ---- \n", vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid), true);
 	test("%d start", syscall, vsyscall_arg(MY_CUSTOM_SYSCALL, 3, REQUEST_START_MONITORING, syscall, pid) == status);
 	return 0;
 }
@@ -174,9 +175,7 @@ void test_syscall(int syscall) {
 	// do_intercept(syscall, -EBUSY);
 	// do_as_guest("./test_full nonroot %d", syscall, 0);
 	// do_start(syscall, -2, -EINVAL);
-		printf("reach0---------------------------------------------------------------------------------\n");
 	do_start(syscall, 0, 0);
-		printf("reach2---------------------------------------------------------------------------------\n");
 	// do_stop(syscall, 0, 0);
 	// do_start(syscall, 1, 0);
 	// do_as_guest("./test_full stop %d 1 %d", syscall, -EPERM);
