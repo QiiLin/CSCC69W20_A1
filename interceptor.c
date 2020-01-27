@@ -363,7 +363,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			printk("in it 2 here\n");
 			return -EINVAL;
 		}
-		printk("in it 3 here\n");
+		printk("in it 3 here %d \n" , (pid_task(find_vpid(pid), PIDTYPE_PID) == NULL));
 		current_uid();
 		printk("in it 33 here\n");
 		check_pid_from_list(current->pid, pid);
@@ -414,7 +414,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			spin_unlock(&pidlist_lock);
 			return -EINVAL;
 		}
-							printk("reach1 here\n");
+		printk("reach1 here\n");
 		// if 2 then !chec  => if in black the result will be false
 		// if syscall is monitor all or the current action is making it monitor all
 		if (table[syscall].monitored != 2 || pid != 0) {
