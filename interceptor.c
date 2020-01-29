@@ -532,6 +532,8 @@ static int init_function(void) {
 	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
 	// store __NR_exit_group in orig_exit_group
 	orig_exit_group = sys_call_table[__NR_exit_group];
+	spin_lock_init(&calltable_lock);
+    spin_lock_init(&pidlist_lock);
 	// get lock for syscall table for syscall table operations
 	spin_lock(&calltable_lock);
 	// set syscall table to RW and replace mysyscall and my_exit_group
@@ -540,12 +542,8 @@ static int init_function(void) {
 	sys_call_table[__NR_exit_group] = (void *) &my_exit_group;
 	// set syscall table back to ro
 	set_addr_ro((unsigned long) sys_call_table);
-	// release syscall table lock
-	spin_unlock(&calltable_lock);
-	// since is only going to be init once ..there is not need to lock it
+	
 	// initialize bookkeeping data structures
-	// lock calltable_lock for synchronization
-	// spin_lock(&calltable_lock);
 	for(s = 1; s < NR_syscalls; s++) {
 		table[s].f = sys_call_table[s];
 		table[s].intercepted = 0;
@@ -554,7 +552,7 @@ static int init_function(void) {
 		INIT_LIST_HEAD(&table[s].my_list);
 	}
 	// release lock after initialization
-	// spin_unlock(&calltable_lock);
+	spin_unlock(&calltable_lock);
 	return 0;
 }
 
@@ -578,27 +576,19 @@ static void exit_function(void)
 	sys_call_table[MY_CUSTOM_SYSCALL] = (void *) orig_custom_syscall;
 	// restore __NR_exit_group to original syscall
 	sys_call_table[__NR_exit_group] = (void *) orig_exit_group;
-	// set syscall table back to ro
-	set_addr_ro((unsigned long) sys_call_table);
-	// release the lock
-	spin_unlock(&calltable_lock);
-
 	// also need to clean up the table, but do we need lock here?
 	// I don't think we need lock here. since this exit will be call only when 
 	// the current kernel module is being unloaded
-	spin_lock(&calltable_lock);
-	set_addr_rw((unsigned long) sys_call_table);
+	spin_lock(&pidlist_lock);
 	for(s = 1; s < NR_syscalls; s++) {
 		if (table[s].intercepted) {
 			sys_call_table[s] = (void *) table[s].f;
 		}
 		destroy_list(s);
-	}	
+	}
 	set_addr_ro((unsigned long) sys_call_table);
+	spin_unlock(&pidlist_lock);
 	spin_unlock(&calltable_lock);
-
-
-
 }
 
 module_init(init_function);
