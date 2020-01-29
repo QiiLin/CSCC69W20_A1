@@ -287,9 +287,11 @@ asmlinkage long interceptor(struct pt_regs reg) {
 	monitored = table[reg.ax].monitored;
 	// If its monitored value is 1 and it is located in the monitor list or monitor value is 2 and it is not located in the monitor pid list
 	// Then log the system call parameter
+	spin_lock(&pidlist_lock);
 	if ((monitored == 1 && check_pid_monitored(reg.ax, current->pid)) || (monitored == 2 && check_pid_monitored(reg.ax, current->pid) == 0)) {
 		log_message(current->pid , reg.ax, reg.bx, reg.cx, reg.dx, reg.si, reg.di, reg.bp);
 	}
+	spin_unlock(&pidlist_lock);
 	// After checking the pid value, unlock the whole table
 	spin_unlock(&calltable_lock);
     // call the orginial system call as requried
@@ -402,7 +404,9 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			// set it to be non intercepted
 			table[syscall].intercepted = 0;
 			// TODO ask ta about this
+			spin_lock(&pidlist_lock);
 			destroy_list(syscall);
+			spin_unlock(&pidlist_lock);
 
 			set_addr_rw((unsigned long)sys_call_table);
 			sys_call_table[syscall] = (void *) table[syscall].f;
@@ -410,12 +414,15 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		}
 		spin_unlock(&calltable_lock);
 	} else if (cmd == REQUEST_START_MONITORING) {
-		spin_lock(&pidlist_lock);
+
+		spin_lock(&calltable_lock);
 		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
 		if (table[syscall].intercepted == 0) {
-			spin_unlock(&pidlist_lock);
+			spin_unlock(&calltable_lock);
 			return -EINVAL;
 		}
+		spin_unlock(&calltable_lock);
+		spin_lock(&pidlist_lock);
 		// if 2 then !chec  => if in black the result will be false
 		// if syscall is monitor all or the current action is making it monitor all
 		if (table[syscall].monitored != 2 || pid != 0) {
