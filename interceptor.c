@@ -348,6 +348,8 @@ asmlinkage long interceptor(struct pt_regs reg) {
  *   you might be holding, before you exit the function (including error cases!).  
  */
 asmlinkage long my_syscall(int cmd, int syscall, int pid) {
+	// initialize a isfirst which represent either request is a system intercept or is a requrest release
+	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	// If command is none of the four possible requrets, it is invalid, return -EiNVAL as required
 	if (cmd != REQUEST_SYSCALL_INTERCEPT &&
         cmd != REQUEST_SYSCALL_RELEASE &&
@@ -360,8 +362,6 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
 	}
-	// initialize a isfirst which represent either request is a system intercept or is a requrest release
-	int isfirst = cmd == REQUEST_SYSCALL_INTERCEPT || cmd == REQUEST_SYSCALL_RELEASE;
 	// Check condition b), if the command is a intercept or release, if the current pid is not zero, then return -EPERM
 	if (isfirst) {
 		if (current_uid() != 0) {
