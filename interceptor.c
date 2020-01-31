@@ -13,7 +13,7 @@
 
 
 MODULE_DESCRIPTION("My kernel module");
-MODULE_AUTHOR("Me");
+MODULE_AUTHOR("Qi, Leop, Tianji");
 MODULE_LICENSE("GPL");
 
 //----- System Call Table Stuff ------------------------------------
@@ -532,8 +532,6 @@ static int init_function(void) {
 	orig_custom_syscall = sys_call_table[MY_CUSTOM_SYSCALL];
 	// store __NR_exit_group in orig_exit_group
 	orig_exit_group = sys_call_table[__NR_exit_group];
-	spin_lock_init(&calltable_lock);
-    spin_lock_init(&pidlist_lock);
 	// get lock for syscall table for syscall table operations
 	spin_lock(&calltable_lock);
 	// set syscall table to RW and replace mysyscall and my_exit_group
