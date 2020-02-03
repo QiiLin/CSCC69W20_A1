@@ -383,7 +383,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 	if (cmd == REQUEST_SYSCALL_INTERCEPT) {
 		// lock the calltable to read value
 		spin_lock(&calltable_lock);
-		// check if it is intercepted
+		// check if it is intercepted then return -EBUSY
 		if (table[syscall].intercepted) {
 			spin_unlock(&calltable_lock);
 			return -EBUSY; 
@@ -421,7 +421,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		}
 		// unlock the calltable so that it become readable
 		spin_unlock(&calltable_lock);
-	// Check the command that related to monitor
+	// Check the command that start to monitor
 	} else if (cmd == REQUEST_START_MONITORING) {
 		spin_lock(&calltable_lock);
 		if (table[syscall].intercepted == 0) {
@@ -429,11 +429,11 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			return -EINVAL;
 		}
 		// unlock the call table
-		// unlock the pid lock
+		// lock the pid lock
 		spin_unlock(&calltable_lock);
 		spin_lock(&pidlist_lock);
-		// if 2 then !chec  => if in black the result will be false
-		// if syscall is monitor all or the current action is making it monitor all
+		// Note: if monitored = 2  =>  the mylist will be the black list
+		// if the syscall is not monitored all  or pid is not trying to monitored all
 		if (table[syscall].monitored != 2 || pid != 0) {
 			// if the pid is already being moitor by the syscall
 			if (check_pid_monitored(syscall, pid)) {
@@ -448,6 +448,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			// set the monitored to 1;
 			table[syscall].monitored = 1;
 		} else {
+			// if pid is trying to monitor all and current syscall is already monitored and black list is empty
+			// such operation isn't necessary and nothing need to be done
 			if (pid == 0 && table[syscall].monitored == 2 && table[syscall].listcount == 0) {
 				spin_unlock(&pidlist_lock);
 				return -EBUSY;
@@ -456,8 +458,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				destroy_list(syscall);
 				table[syscall].monitored = 2;
 			} else {
-				// remove pid form black list and I am not sure if I should do this
-				// check if the pid is in the black list
+				// remove pid form black list
 				if (check_pid_monitored(syscall, pid) == 0) {
 					spin_unlock(&pidlist_lock);
 					return -EINVAL;
