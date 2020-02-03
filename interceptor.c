@@ -13,7 +13,7 @@
 
 
 MODULE_DESCRIPTION("My kernel module");
-MODULE_AUTHOR("Qi, Leop, Tianji");
+MODULE_AUTHOR("Qi, linjial2, Tianji");
 MODULE_LICENSE("GPL");
 
 //----- System Call Table Stuff ------------------------------------
@@ -282,7 +282,7 @@ void my_exit_group(int status)
 asmlinkage long interceptor(struct pt_regs reg) {
 	// Initilize monitored var to represent whether the sys call is monitor status
 	int monitored;
-	// Lock the call table and read the monitor from the table
+	// Lock the call table and read the value from it
 	spin_lock(&calltable_lock);
 	monitored = table[reg.ax].monitored;
 	// If its monitored value is 1 and it is located in the monitor list or monitor value is 2 and it is not located in the monitor pid list
@@ -358,7 +358,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
         return -EINVAL;
     }
 	// The number of syscall should be a positive number and it should be within NR_syscalls (number) and it should
-	// not be my customed systemcall (As a) required)
+	// not be my customed systemcall (As a) required
 	if (syscall < 0 || syscall > NR_syscalls || syscall == MY_CUSTOM_SYSCALL) {
 		return -EINVAL;
 	}
@@ -373,7 +373,8 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		if ( pid < 0 || (pid != 0 && pid_task(find_vpid(pid), PIDTYPE_PID) == NULL)) {
 			return -EINVAL;
 		}
-		// the calling process is not root or pid is in the black list, then return -EPERM
+		// also, if 'pid' is 0 and the calling process is not root, then access is denied 
+		// or if not, then check if the 'pid' requested is owned by the calling process
 		if ((pid == 0 && current_uid() != 0) || (pid != 0 && check_pid_from_list(current->pid, pid) != 0)) {
 			return -EPERM;
 		}
@@ -389,12 +390,18 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		} else {
 			// set it to be intercepted
 			table[syscall].intercepted = 1;
+			// Make system table writerable
 			set_addr_rw((unsigned long)sys_call_table);
+			// replace the function
 			sys_call_table[syscall] = (void *)&interceptor;
+			// Make table read only
 			set_addr_ro((unsigned long)sys_call_table);
 		}
+		// unlock the table to read
 		spin_unlock(&calltable_lock);
+	// check the command that related to request system release
 	} else if (cmd == REQUEST_SYSCALL_RELEASE) {
+		// Lock the calltable to read value from it
 		spin_lock(&calltable_lock);
 		// check if it is not intercept
 		if (table[syscall].intercepted == 0) {
@@ -403,24 +410,26 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 		} else {
 			// set it to be non intercepted
 			table[syscall].intercepted = 0;
-			// TODO ask ta about this
 			spin_lock(&pidlist_lock);
 			destroy_list(syscall);
 			spin_unlock(&pidlist_lock);
-
+			// Set system call table editable
 			set_addr_rw((unsigned long)sys_call_table);
 			sys_call_table[syscall] = (void *) table[syscall].f;
+			// Set the system call read-only
 			set_addr_ro((unsigned long)sys_call_table);
 		}
+		// unlock the calltable so that it become readable
 		spin_unlock(&calltable_lock);
+	// Check the command that related to monitor
 	} else if (cmd == REQUEST_START_MONITORING) {
-
 		spin_lock(&calltable_lock);
-		// if it is not intercepted... can we monitoring? if not I should setup the function as well TODO
 		if (table[syscall].intercepted == 0) {
 			spin_unlock(&calltable_lock);
 			return -EINVAL;
 		}
+		// unlock the call table
+		// unlock the pid lock
 		spin_unlock(&calltable_lock);
 		spin_lock(&pidlist_lock);
 		// if 2 then !chec  => if in black the result will be false
@@ -447,7 +456,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 				destroy_list(syscall);
 				table[syscall].monitored = 2;
 			} else {
-				// remove pid form black list and I am not sure if I should do this TODO
+				// remove pid form black list and I am not sure if I should do this
 				// check if the pid is in the black list
 				if (check_pid_monitored(syscall, pid) == 0) {
 					spin_unlock(&pidlist_lock);
@@ -461,6 +470,7 @@ asmlinkage long my_syscall(int cmd, int syscall, int pid) {
 			}
 		}
 		spin_unlock(&pidlist_lock);
+		// Check the command that relate to the stop monitoring pid
 	} else {
 		spin_lock(&pidlist_lock);
 		if (table[syscall].monitored == 0){
@@ -574,9 +584,7 @@ static void exit_function(void)
 	sys_call_table[MY_CUSTOM_SYSCALL] = (void *) orig_custom_syscall;
 	// restore __NR_exit_group to original syscall
 	sys_call_table[__NR_exit_group] = (void *) orig_exit_group;
-	// also need to clean up the table, but do we need lock here?
-	// I don't think we need lock here. since this exit will be call only when 
-	// the current kernel module is being unloaded
+	// lock the pidlist and destroy the list
 	spin_lock(&pidlist_lock);
 	for(s = 1; s < NR_syscalls; s++) {
 		if (table[s].intercepted) {
@@ -584,6 +592,8 @@ static void exit_function(void)
 		}
 		destroy_list(s);
 	}
+	// Set the table read only
+	// unlock the pid and system call tables
 	set_addr_ro((unsigned long) sys_call_table);
 	spin_unlock(&pidlist_lock);
 	spin_unlock(&calltable_lock);
